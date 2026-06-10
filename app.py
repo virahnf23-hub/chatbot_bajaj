@@ -1,201 +1,139 @@
-from flask import Flask, render_template, request, jsonify, redirect, session
-from flask_mysqldb import MySQL
+import streamlit as st
 from chatbot import get_response
 
-app = Flask(__name__)
-app.secret_key = 'bajajsemarang'
+st.set_page_config(
+    page_title="Bajaj Semarang",
+    page_icon="🛺",
+    layout="wide"
+)
+
+st.title("🛺 BAJAJ SEMARANG")
+st.write("Transportasi Kota & City Tour Semarang")
+
+menu = st.sidebar.selectbox(
+    "Menu",
+    ["Beranda", "Chatbot", "Booking", "Login Admin"]
+)
 
 # ==========================
-# KONFIGURASI DATABASE
+# BERANDA
 # ==========================
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'bajajbot'
+if menu == "Beranda":
 
-mysql = MySQL(app)
+    st.header("Selamat Datang")
 
-# ==========================
-# HALAMAN UTAMA
-# ==========================
-@app.route('/')
-def index():
-    return render_template('index.html')
+    st.write("""
+    Layanan Bajaj Semarang:
+
+    - 🚖 Antar Jemput
+    - 🏛️ City Tour
+    - 💰 Tarif Mulai Rp15.000
+    - 🕐 Operasional 06.00–22.00 WIB
+    """)
 
 
 # ==========================
 # CHATBOT
 # ==========================
-@app.route('/chat')
-def chat():
-    return render_template('chat.html')
+elif menu == "Chatbot":
 
+    st.header("🤖 Chatbot Bajaj Semarang")
 
-@app.route('/get_response', methods=['POST'])
-def response():
+    pickup = st.selectbox(
+        "Lokasi Penjemputan",
+        [
+            "Simpang Lima",
+            "Kota Lama",
+            "Lawang Sewu",
+            "Tugu Muda",
+            "Bandara Ahmad Yani",
+            "Stasiun Tawang",
+            "Stasiun Poncol"
+        ]
+    )
 
-    data = request.get_json()
+    msg = st.text_input("Tulis pertanyaan")
 
-    pickup = data.get('pickup', '')
-    user_message = data['message']
+    if st.button("Kirim"):
 
-    bot_response = get_response(user_message, pickup)
+        response = get_response(msg, pickup)
 
-    return jsonify({
-        'response': bot_response
-    })
-
-    mysql.connection.commit()
-    cur.close()
-
-    return jsonify({
-        'response': bot_response
-    })
+        st.success(response)
 
 
 # ==========================
-# BOOKING BAJAJ
+# BOOKING
 # ==========================
-@app.route('/booking', methods=['GET', 'POST'])
-def booking():
+elif menu == "Booking":
 
-    if request.method == 'POST':
+    st.header("🛺 Booking Bajaj")
 
-        nama = request.form['nama']
-        no_hp = request.form['no_hp']
-        lokasi = request.form['lokasi_jemput']
-        tujuan = request.form['tujuan']
-        layanan = request.form['layanan']
-        tanggal = request.form['tanggal']
-        catatan = request.form['catatan']
+    nama = st.text_input("Nama")
 
-        # Hitung tarif
-        if layanan == "City Tour":
-            tarif = 75000
-        else:
-            tarif = 15000
+    no_hp = st.text_input("No HP")
 
-        status = "Menunggu Driver"
+    lokasi = st.selectbox(
+        "Lokasi Penjemputan",
+        [
+            "Simpang Lima",
+            "Kota Lama",
+            "Lawang Sewu",
+            "Bandara Ahmad Yani",
+            "Stasiun Tawang"
+        ]
+    )
 
-        cur = mysql.connection.cursor()
+    tujuan = st.text_input("Tujuan")
 
-        cur.execute(
-            """
-            INSERT INTO booking
-            (nama, no_hp, motor, tanggal, keluhan)
-            VALUES (%s,%s,%s,%s,%s)
-            """,
-            (
-                nama,
-                no_hp,
-                layanan,
-                tanggal,
-                f"Jemput: {lokasi} | Tujuan: {tujuan} | Catatan: {catatan}"
-            )
-        )
+    layanan = st.selectbox(
+        "Layanan",
+        ["Antar Jemput", "City Tour"]
+    )
 
-        mysql.connection.commit()
+    tanggal = st.date_input("Tanggal")
 
-        booking_id = cur.lastrowid
+    catatan = st.text_area("Catatan")
 
-        cur.close()
+    if st.button("Pesan Bajaj"):
 
-        return render_template(
-            'booking_success.html',
-            booking_id=booking_id,
-            nama=nama,
-            lokasi=lokasi,
-            tujuan=tujuan,
-            layanan=layanan,
-            tarif=tarif,
-            status=status
-        )
+        tarif = 75000 if layanan == "City Tour" else 15000
 
-    return render_template('booking.html')
+        st.success("✅ Booking Berhasil")
+
+        st.write("### Detail Booking")
+
+        st.write("Nama :", nama)
+        st.write("No HP :", no_hp)
+        st.write("Jemput :", lokasi)
+        st.write("Tujuan :", tujuan)
+        st.write("Layanan :", layanan)
+        st.write("Tanggal :", tanggal)
+        st.write("Catatan :", catatan)
+        st.write("Tarif :", f"Rp {tarif:,}")
+
+        st.info("💳 Pembayaran dilakukan kepada driver saat penjemputan.")
 
 
 # ==========================
 # LOGIN ADMIN
 # ==========================
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+elif menu == "Login Admin":
 
-    if request.method == 'POST':
+    st.header("🔐 Login Admin")
 
-        username = request.form['username']
-        password = request.form['password']
+    username = st.text_input("Username")
 
-        cur = mysql.connection.cursor()
-
-        cur.execute(
-            """
-            SELECT *
-            FROM admin
-            WHERE username=%s
-            AND password=%s
-            """,
-            (username, password)
-        )
-
-        admin = cur.fetchone()
-
-        cur.close()
-
-        if admin:
-
-            session['admin'] = username
-
-            return redirect('/dashboard')
-
-        return render_template(
-            'login.html',
-            error='Username atau password salah.'
-        )
-
-    return render_template('login.html')
-
-
-# ==========================
-# DASHBOARD ADMIN
-# ==========================
-@app.route('/dashboard')
-def dashboard():
-
-    if 'admin' not in session:
-
-        return redirect('/login')
-
-    cur = mysql.connection.cursor()
-
-    cur.execute("""
-        SELECT *
-        FROM booking
-        ORDER BY id DESC
-    """)
-
-    booking = cur.fetchall()
-
-    cur.close()
-
-    return render_template(
-        'dashboard.html',
-        booking=booking
+    password = st.text_input(
+        "Password",
+        type="password"
     )
 
+    if st.button("Login"):
 
-# ==========================
-# LOGOUT
-# ==========================
-@app.route('/logout')
-def logout():
+        if username == "admin" and password == "admin":
 
-    session.clear()
+            st.success("Login berhasil")
 
-    return redirect('/')
+        else:
 
-
-# ==========================
-# JALANKAN APLIKASI
-# ==========================
-if __name__ == '__main__':
-    app.run(debug=True)
+            st.error("Username atau password salah")
