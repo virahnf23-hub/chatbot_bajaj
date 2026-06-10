@@ -2,24 +2,36 @@ import os
 import streamlit as st
 from google import genai
 
-# 1. Pastikan API Key aman dan Client didefinisikan dulu!
+# 1. Inisialisasi API Key dan Client
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
-    st.error("GEMINI_API_KEY belum dikonfigurasi di Secrets!")
+    st.error("Waduh! GEMINI_API_KEY belum dipasang di Secrets Streamlit Cloud.")
     st.stop()
 
-# Membuat objek client (ini yang tadi hilang/belum didefinisikan)
 client = genai.Client(api_key=api_key)
 
-# 2. Bungkus proses generate ke dalam fungsi agar bisa dipanggil oleh app.py
+# 2. Fungsi untuk mengambil respons dari Gemini
 def get_response(msg, pickup):
-    # Gabungkan pesan atau buat prompt sesuai kebutuhan aplikasi Bajaj kamu
-    prompt = f"User bertanya: {msg}. Lokasi pickup: {pickup}"
+    # Validasi: Jika input kosong atau hanya berisi spasi, jangan kirim ke API
+    if not msg or str(msg).strip() == "":
+        return "Halo! Silakan tulis pertanyaan Anda terlebih dahulu tentang Bajaj Semarang."
+
+    # Menyusun prompt menjadi string murni yang jelas
+    prompt = f"Pengguna bertanya tentang Bajaj di Semarang: '{str(msg)}'. Lokasi penjemputan mereka saat ini di: '{str(pickup)}'. Tolong berikan jawaban yang ramah dan membantu."
     
-    # Baru panggil client.models di dalam fungsi ini
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-    
-    return response.text
+    try:
+        # Panggil API Gemini dengan model stabil versi terbaru
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        
+        # Kembalikan teks hasil dari model
+        if response and response.text:
+            return response.text
+        else:
+            return "Maaf, sistem tidak berhasil menghasilkan jawaban. Silakan coba lagi."
+            
+    except Exception as e:
+        # Jika masih ada error dari sisi Google, tangkap di sini agar aplikasi tidak crash berwarna pink
+        return f"Aplikasi mengalami kendala teknis saat menghubungi AI. (Detail: {str(e)})"
