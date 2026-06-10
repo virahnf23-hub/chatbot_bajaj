@@ -1,17 +1,34 @@
+from google import genai
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
+
 def get_response(message, pickup=""):
 
-    msg = message.lower()
+    prompt = f"""
+    Kamu adalah chatbot resmi Bajaj Semarang.
 
-    if "tarif" in msg:
-        return f"💰 Tarif Bajaj mulai Rp15.000 dari lokasi {pickup}."
+    Informasi:
+    - Tarif antar jemput mulai Rp15.000
+    - City Tour Rp75.000/jam
+    - Operasional 06.00–22.00 WIB
+    - Area layanan Kota Semarang
+    - Lokasi penjemputan: {pickup}
 
-    elif "city tour" in msg:
-        return "🏛️ City Tour tersedia mulai Rp75.000 per jam."
+    Pertanyaan pelanggan:
+    {message}
 
-    elif "operasional" in msg:
-        return "🕐 Operasional setiap hari pukul 06.00–22.00 WIB."
+    Jawab dengan ramah dan singkat.
+    """
 
-    elif "area" in msg:
-        return "📍 Melayani seluruh wilayah Kota Semarang."
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
 
-    return "🤖 Maaf, saya belum memahami pertanyaan Anda."
+    return response.text
